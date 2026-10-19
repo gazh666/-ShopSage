@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>睿购 ShopSage · AI 导购智能体 · 作品集</title>
+<style>
+  :root{
+    --bg:#0b1020; --bg2:#121a33; --card:#1a2340; --line:#2b3760;
+    --txt:#e8ecf8; --muted:#9aa6c8; --brand:#5b8cff; --brand2:#8b5cf6;
+    --green:#34d399; --amber:#fbbf24; --red:#f87171;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#1b2a5e 0%,var(--bg) 55%);color:var(--txt);line-height:1.7}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+  a{color:var(--brand);text-decoration:none}
+  .muted{color:var(--muted)}
+  header.hero{padding:96px 0 56px;text-align:center}
+  .logo{display:inline-flex;align-items:center;gap:14px;font-size:15px;letter-spacing:.5px;color:var(--muted)}
+  .logo .mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;font-weight:800;color:#fff;font-size:18px}
+  h1{font-size:52px;margin:22px 0 10px;letter-spacing:-1px}
+  h1 .grad{background:linear-gradient(90deg,var(--brand),var(--brand2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .tagline{font-size:20px;color:var(--muted);max-width:640px;margin:0 auto}
+  .badges{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:26px 0 8px}
+  .badge{padding:6px 14px;border:1px solid var(--line);border-radius:999px;font-size:13px;color:var(--muted)}
+  .cta{display:flex;gap:14px;justify-content:center;margin-top:30px}
+  .btn{padding:11px 22px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px}
+  .btn--primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
+  .btn--ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  section{padding:20px 0 40px}
+  h2{font-size:30px;margin:0 0 8px;letter-spacing:-.5px}
+  .sub{color:var(--muted);margin:0 0 28px}
+  .grid{display:grid;gap:18px}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .g4{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+  .card h3{margin:0 0 8px;font-size:18px}
+  .card .num{font-size:11px;letter-spacing:1px;color:var(--brand2);font-weight:700;text-transform:uppercase}
+  .card p{color:var(--muted);margin:0;font-size:14.5px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;margin-top:18px}
+  .flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center}
+  .node{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13.5px;text-align:center;min-width:110px}
+  .node b{display:block;color:var(--txt)}
+  .node small{color:var(--muted)}
+  .arrow{color:var(--brand);font-weight:800}
+  .status{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;margin:2px 0}
+  .s-init{background:#334155;color:#cbd5e1}.s-run{background:#164e63;color:#67e8f9}.s-ok{background:#064e3b;color:#6ee7b7}.s-fail{background:#7f1d1d;color:#fca5a5}
+  .metric-row{display:flex;align-items:center;gap:16px;margin:14px 0}
+  .metric-row .label{width:170px;font-size:14px;color:var(--muted)}
+  .meter{flex:1;height:12px;background:var(--bg2);border-radius:999px;overflow:hidden}
+  .meter span{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2));border-radius:999px}
+  .meter span.green{background:linear-gradient(90deg,#10b981,#34d399)}
+  .val{width:70px;text-align:right;font-weight:700}
+  .note{font-size:12px;color:var(--muted);margin-top:14px}
+  .video{aspect-ratio:16/9;background:var(--bg2);border:1px dashed var(--line);border-radius:14px;display:grid;place-items:center;color:var(--muted)}
+  footer{padding:40px 0 60px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line);margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="logo"><span class="mark">S</span> 睿购 ShopSage · AI 导购智能体</div>
+    <h1>多模态电商导购<br/><span class="grad">任务规划流水线</span>智能体</h1>
+    <p class="tagline">把大模型接入真实电商业务系统 —— 分步规划、检索、校验、加购，环环可观测、可评估、可断点恢复。</p>
+    <div class="badges">
+      <span class="badge">Go 1.24 后端</span>
+      <span class="badge">React 19 + Vite + TS</span>
+      <span class="badge">Android 原生客户端</span>
+      <span class="badge">Milvus 向量检索</span>
+      <span class="badge">Nacos 配置中心</span>
+      <span class="badge">Docker 全栈</span>
+    </div>
+    <div class="cta">
+      <a class="btn btn--primary" href="#highlights">二次开发亮点</a>
+      <a class="btn btn--ghost" href="./README.md">部署文档</a>
+    </div>
+  </header>
+
+  <section id="overview">
+    <h2>项目概览</h2>
+    <p class="sub">一个「Agent-first」的电商导购系统，覆盖用户侧 AI 导购、真实商品召回、加购下单闭环、商家履约、管理员观测与质量测评全链路。</p>
+    <div class="grid g4">
+      <div class="card"><div class="num">01</div><h3>多模态输入</h3><p>文本导购、图片找同款、语音输入与 TTS 播报统一接入。</p></div>
+      <div class="card"><div class="num">02</div><h3>真实业务闭环</h3><p>商品库、购物车、订单、优惠、评价、知识库全打通。</p></div>
+      <div class="card"><div class="num">03</div><h3>可观测排障</h3><p>意图、Prompt、工具调用、RAG 片段全链路追踪可视化。</p></div>
+      <div class="card"><div class="num">04</div><h3>质量测评</h3><p>意图识别、RAG 召回、Agent 端到端报告与明细。</p></div>
+    </div>
+  </section>
+
+  <section id="highlights">
+    <h2>二次开发亮点</h2>
+    <p class="sub">相对原始电商底座，本次工程化增强聚焦「规划、执行、校验、恢复、评估」五个维度。</p>
+    <div class="grid g2">
+      <div class="card">
+        <div class="num">Highlight 01</div>
+        <h3>Agent 任务规划与容错</h3>
+        <p>引入 ReAct / Plan-and-Solve，实现任务拆分、子任务结果校验、工具调用重试与降级，让复杂导购请求可被分步可靠执行。</p>
+      </div>
+      <div class="card">
+        <div class="num">Highlight 02</div>
+        <h3>上下文分层管理</h3>
+        <p>把上下文拆为任务状态、短期对话、用户长期记忆、外部检索信息四类独立存储，并落地用户偏好持久化。</p>
+      </div>
+      <div class="card">
+        <div class="num">Highlight 03</div>
+        <h3>导购任务规划流水线</h3>
+        <p>TaskPlanner / TaskExecutor / ResultVerifier / TaskStateManager / TraceAdapter 五模块：复杂请求自动进入流水线，简单 query 走原单轮 Agent，支持中断断点恢复。</p>
+      </div>
+      <div class="card">
+        <div class="num">Highlight 04</div>
+        <h3>工业级工程化</h3>
+        <p>前后端独立多阶段 Dockerfile、docker-compose 全栈编排、统一 Makefile、GitHub Actions CI，一键拉起即可演示。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>任务规划流水线</h2>
+    <p class="sub">复杂导购请求从任务初始化到完成的完整状态机，主任务与子任务状态均持久化到数据库，支持中断后断点恢复。</p>
+    <div class="panel">
+      <div class="flow">
+        <div class="node"><b>用户 query</b><small>复杂导购请求</small></div>
+        <span class="arrow">→</span>
+        <div class="node"><b>任务初始化</b><span class="status s-init">INIT</span></div>
+        <span class="arrow">→</span>
+        <div class="node"><b>Plan 规划</b><span class="status s-run">PLANNING</span><small>LLM 生成子任务清单</small></div>
+        <span class="arrow">→</span>
+        <div class="node"><b>Verify & Execute</b><span class="status s-run">RUNNING</span><small>规则 + 模型双重校验</small></div>
+      </div>
+      <div class="flow" style="margin-top:16px">
+        <div class="node"><span class="status s-ok">SUCCESS</span><small>校验通过</small></div>
+        <span class="arrow">→</span>
+        <div class="node"><b>全部成功</b><span class="status s-ok">COMPLETED</span></div>
+        <span class="arrow" style="margin:0 10px">/</span>
+        <div class="node"><span class="status s-fail">FAILED</span><small>重试后仍失败</small></div>
+        <span class="arrow">→</span>
+        <div class="node"><b>降级分支</b><small>询问用户是否放宽条件</small></div>
+      </div>
+      <p class="note">子任务按依赖顺序串行调度，工具执行后经「规则校验（预算/库存/品类）+ 轻量模型校验（主观约束）」双重把关；校验失败自动重试，多次失败进入降级分支并动态重规划。</p>
+    </div>
+  </section>
+
+  <section id="metrics">
+    <h2>效果评估体系</h2>
+    <p class="sub">管理员后台「质量评测」页提供业务指标与任务流水线指标两类维度，以下为指标维度示意（实际数值由后台实时统计）。</p>
+    <div class="panel">
+      <div class="metric-row"><span class="label">导购任务完成率</span><div class="meter"><span class="green" style="width:86%"></span></div><span class="val">86%</span></div>
+      <div class="metric-row"><span class="label">子任务执行成功率</span><div class="meter"><span class="green" style="width:92%"></span></div><span class="val">92%</span></div>
+      <div class="metric-row"><span class="label">工具平均重试次数</span><div class="meter"><span style="width:24%"></span></div><span class="val">0.4</span></div>
+      <div class="metric-row"><span class="label">任务中断恢复成功率</span><div class="meter"><span style="width:78%"></span></div><span class="val">78%</span></div>
+      <div class="metric-row"><span class="label">工具 P95 时延</span><div class="meter"><span style="width:40%"></span></div><span class="val">-</span></div>
+      <p class="note">上图数值为示意图，用于展示指标体系；接入真实模型密钥后，可在后台查看实时统计口径。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>技术栈</h2>
+    <div class="grid g4">
+      <div class="card"><h3>后端</h3><p>Go 1.24、MySQL、Redis、Nacos、Milvus、MinIO</p></div>
+      <div class="card"><h3>前端</h3><p>React 19、Vite、TypeScript、管理/商家后台</p></div>
+      <div class="card"><h3>客户端</h3><p>Java 原生 Android，流式渲染、图片/TTS</p></div>
+      <div class="card"><h3>AI / LLM</h3><p>ReAct、工具编排、RAG、向量检索、Prompt 版本管理</p></div>
+    </div>
+  </section>
+
+  <section id="demo">
+    <h2>演示视频</h2>
+    <p class="sub">将演示录像（如 demo.mp4）放入项目根目录并命名为 demo.mp4，即可在下方展示。</p>
+    <div class="panel">
+      <div class="video"><span>演示视频占位（替换为 demo.mp4）</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>睿购 ShopSage · AI 导购智能体 —— 个人作品集展示</p>
+    <p class="muted">AI 导购建议仅作辅助参考，实际购物决策请以商品详情与个人实际需求为准。</p>
+  </footer>
+</div>
+</body>
+</html>

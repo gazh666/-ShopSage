@@ -1,0 +1,1238 @@
+# API 接口文档 v3
+
+更新时间：2026-05-24
+
+## 通用约定
+
+Base URL：
+
+```text
+http://127.0.0.1:8080/api/v1
+```
+
+鉴权：
+
+```http
+Authorization: Bearer <token>
+```
+
+分页接口统一参数：
+
+```text
+page=1&page_size=10
+```
+
+分页响应：
+
+```json
+{
+  "items": [],
+  "page": 1,
+  "page_size": 10,
+  "total": 0
+}
+```
+
+错误响应：
+
+```json
+{
+  "code": "bad_request",
+  "message": "请求 JSON 不合法",
+  "request_id": "req_xxx"
+}
+```
+
+角色：
+
+- 公开：不需要登录。
+- 用户：`role=user`。
+- 商家：`role=merchant`。
+- 管理员：`role=admin`。
+
+## 健康检查
+
+### GET /health
+
+权限：公开
+
+响应：
+
+```json
+{"status": "ok"}
+```
+
+## 认证
+
+### POST /auth/login
+
+权限：公开
+
+请求：
+
+```json
+{
+  "username": "admin",
+  "password": "admin123456"
+}
+```
+
+响应：
+
+```json
+{
+  "token": "tok_xxx",
+  "account": {
+    "account_id": "acct_admin_001",
+    "username": "admin",
+    "display_name": "平台管理员",
+    "role": "admin",
+    "merchant_id": "",
+    "created_at": "2026-05-24T10:00:00+08:00"
+  }
+}
+```
+
+### POST /auth/register
+
+权限：公开
+
+用途：注册普通用户账号。公开注册只创建 `role=user`，不允许通过该接口创建商家或管理员账号。
+
+请求：
+
+```json
+{
+  "username": "new_user",
+  "password": "newuser123456",
+  "display_name": "新用户"
+}
+```
+
+字段约束：
+
+- `username`：3-32 个字符，只允许字母、数字、下划线和短横线。
+- `password`：8-64 个字符。
+- `display_name`：可选，最长 32 个字符；为空时默认使用 `username`。
+
+响应：`201 Created`
+
+```json
+{
+  "token": "tok_xxx",
+  "account": {
+    "account_id": "acct_xxx",
+    "username": "new_user",
+    "display_name": "新用户",
+    "role": "user",
+    "merchant_id": "",
+    "status": "active",
+    "created_at": "2026-05-24T10:00:00+08:00"
+  }
+}
+```
+
+错误：
+
+- `400 invalid_register_input`：账号、密码或昵称格式不合法。
+- `409 username_exists`：账号已存在。
+
+### GET /auth/me
+
+权限：登录用户
+
+响应：当前账号对象。
+
+## 商品与类目
+
+### GET /categories/tree
+
+权限：公开
+
+用途：查询类目树。
+
+响应：
+
+```json
+{
+  "items": [
+    {
+      "categoryId": "c_dataset_digital",
+      "parentId": "",
+      "name": "数码电子",
+      "children": []
+    }
+  ]
+}
+```
+
+### GET /merchants
+
+权限：公开
+
+用途：查询商家列表。
+
+Query：`page`、`page_size`
+
+### GET /products
+
+权限：公开
+
+用途：商品列表和搜索。
+
+Query：
+
+- `keyword`：商品关键词，可为空。
+- `category_id`：类目 ID，可为空。
+- `page`：页码，默认 1。
+- `page_size`：每页数量，默认 10，最大 100。
+
+响应：
+
+```json
+{
+  "items": [
+    {
+      "productId": "p_digital_001",
+      "skuId": "",
+      "merchantId": "m_001",
+      "merchantName": "小猪数码",
+      "name": "商品名称",
+      "brand": "品牌",
+      "categoryId": "c_dataset_digital",
+      "imageUrl": "/api/v1/assets/ecommerce_agent_dataset/...",
+      "price": "2999.00",
+      "marketPrice": "3299.00",
+      "stockStatus": "in_stock",
+      "tags": ["热卖"],
+      "sellingPoints": ["卖点"],
+      "recommendReason": "推荐理由",
+      "riskNotes": []
+    }
+  ]
+}
+```
+
+### GET /products/{product_id}
+
+权限：公开
+
+用途：查询商品详情。
+
+响应字段在商品卡片基础上增加：
+
+- `imageUrls`
+- `stockQuantity`
+- `attributes`
+- `suitableFor`
+- `notSuitableFor`
+- `description`
+
+### GET /products/{product_id}/skus
+
+权限：公开
+
+用途：查询商品 SKU。
+
+Query：`page`、`page_size`
+
+### GET /products/{product_id}/reviews
+
+权限：公开
+
+用途：查询商品可见评价。
+
+Query：`page`、`page_size`
+
+## 购物车
+
+### GET /cart
+
+权限：用户
+
+用途：查询当前用户购物车。
+
+响应：
+
+```json
+{
+  "items": [
+    {
+      "cartItemId": "cart_xxx",
+      "productId": "p_digital_001",
+      "skuId": "sku_xxx",
+      "name": "商品名称",
+      "imageUrl": "...",
+      "price": "2999.00",
+      "quantity": 1,
+      "selected": true,
+      "stockStatus": "in_stock",
+      "merchantId": "m_001",
+      "merchantName": "小猪数码"
+    }
+  ],
+  "summary": {
+    "selectedCount": 1,
+    "totalAmount": "2999.00",
+    "discountAmount": "0.00",
+    "payAmount": "2999.00"
+  }
+}
+```
+
+### POST /cart/items
+
+权限：用户
+
+用途：加入购物车。
+
+并发语义：同一用户、同一 `product_id + sku_id` 使用原子 upsert；重复点击会累加数量，不会产生重复购物车行。
+
+请求：
+
+```json
+{
+  "product_id": "p_digital_001",
+  "sku_id": "sku_xxx",
+  "quantity": 1
+}
+```
+
+响应：更新后的购物车。
+
+### PATCH /cart/items/{cart_item_id}
+
+权限：用户
+
+用途：修改购物车数量或选中状态。
+
+请求：
+
+```json
+{
+  "quantity": 2,
+  "selected": true
+}
+```
+
+响应：更新后的购物车。
+
+### DELETE /cart/items/{cart_item_id}
+
+权限：用户
+
+用途：删除购物车项。
+
+响应：更新后的购物车。
+
+### GET /cart/discount-preview
+
+权限：用户
+
+用途：按购物车选中项计算促销和优惠券折扣。
+
+响应：
+
+```json
+{
+  "total_amount": "2999.00",
+  "discount_amount": "130.00",
+  "pay_amount": "2869.00",
+  "lines": [
+    {
+      "type": "promotion",
+      "id": "promo_platform_001",
+      "name": "平台满 300 减 30",
+      "amount": "30.00"
+    }
+  ]
+}
+```
+
+## 订单
+
+### GET /orders
+
+权限：用户
+
+用途：查询当前用户订单列表。
+
+Query：`page`、`page_size`
+
+### POST /orders:checkout
+
+权限：用户
+
+用途：从购物车选中项创建待支付订单。当前版本按商家拆单。
+
+事务语义：
+
+- 后端在事务内锁定当前用户选中的购物车项。
+- 下单时校验并扣减商品/SKU 库存，库存不足则本次 checkout 失败。
+- 订单、支付单、订单项、购物车清理和库存扣减在同一事务内完成。
+- 并发重复 checkout 时，只有一个请求能锁定并消费已选购物车项；后续请求会因为没有选中项或库存不足而失败。
+
+响应：
+
+```json
+{
+  "items": [
+    {
+      "order_id": "ord_xxx",
+      "order_no": "NO20260524120000...",
+      "status": "pending_payment",
+      "total_amount": "299.00",
+      "discount_amount": "0.00",
+      "pay_amount": "299.00",
+      "payment_deadline_at": "2026-05-24T12:30:00+08:00",
+      "items": []
+    }
+  ]
+}
+```
+
+### GET /orders/{order_id}
+
+权限：用户
+
+用途：查询当前用户订单详情。查询时会懒执行待支付订单超时关闭。
+
+### POST /orders/{order_id}:pay
+
+权限：用户
+
+用途：虚拟支付待支付订单。
+
+请求：
+
+```json
+{"method": "mock_balance"}
+```
+
+响应：
+
+```json
+{
+  "order": {"order_id": "ord_xxx", "status": "pending_ship"},
+  "payment": {"payment_id": "pay_xxx", "status": "success"}
+}
+```
+
+### POST /orders/{order_id}:cancel
+
+权限：用户
+
+用途：取消待支付订单。
+
+请求：
+
+```json
+{"reason": "暂时不买了"}
+```
+
+### POST /orders/{order_id}:confirm-receipt
+
+权限：用户
+
+用途：确认收货。只有 `shipped` 订单可确认。
+
+### POST /orders/{order_id}/items/{order_item_id}:review
+
+权限：用户
+
+用途：对已完成订单项评价。每个订单项只能评价一次。
+
+请求：
+
+```json
+{
+  "rating": 5,
+  "content": "发货快，商品符合预期",
+  "tags": ["物流快", "质量好"]
+}
+```
+
+订单状态：
+
+- `pending_payment`：待支付。
+- `pending_ship`：已支付，待商家发货。
+- `shipped`：已发货。
+- `completed`：已完成。
+- `closed_timeout`：支付超时自动关闭。
+- `canceled`：用户取消。
+- `refund_requested`：退款/售后申请中，预留。
+- `refunded`：已退款，预留。
+
+## 优惠券与促销
+
+### GET /promotions
+
+权限：公开
+
+用途：查询平台和商家促销规则。
+
+Query：`page`、`page_size`
+
+### GET /coupons/available
+
+权限：登录用户
+
+用途：查询当前可领取优惠券。未登录时按空用户查询。
+
+Query：`page`、`page_size`
+
+### GET /coupons/mine
+
+权限：用户
+
+用途：查询当前用户已领取优惠券。
+
+Query：`page`、`page_size`
+
+### POST /coupons/{coupon_id}:claim
+
+权限：用户
+
+用途：领取优惠券。
+
+错误：
+
+- `409 claim_failed`：已领取、已过期或已领完。
+
+## Agent 会话
+
+Agent SSE 输出协议详见：
+
+[Agent输出协议_v1.md](/Users/keii/xzxg-shop/.ai/api/Agent输出协议_v1.md)
+
+前端挂品解析约定：
+
+- 前端优先消费 SSE `block_delta` 中的 `product_card`、`product_ids` 等结构化块。
+- 如果主回答文本里出现 `<item>...</item>`，标签内容必须是商品 ID，例如 `<item>p_digital_001</item>`。
+- `<item>` 内禁止放商品名、品牌名或自然语言推荐语。
+- 前端可用该商品 ID 再调用 `GET /products/{product_id}` 获取详情或渲染商品卡。
+
+### GET /agent/sessions
+
+权限：用户
+
+用途：查询当前用户历史会话列表。
+
+Query：`page`、`page_size`
+
+### POST /agent/sessions
+
+权限：用户
+
+用途：创建 Agent 会话。
+
+请求：
+
+```json
+{"title": "AI 导购"}
+```
+
+### GET /agent/sessions/{session_id}
+
+权限：用户
+
+用途：查询会话详情，包含消息和关联 run。
+
+### PATCH /agent/sessions/{session_id}
+
+权限：用户
+
+用途：更新会话标题或摘要。
+
+请求：
+
+```json
+{
+  "title": "露营装备清单",
+  "summary": "用户在选露营装备，预算偏入门。"
+}
+```
+
+### POST /agent/sessions/{session_id}/messages:stream
+
+权限：用户
+
+用途：发送用户消息并通过 SSE 流式返回 Agent 输出。
+
+请求头：
+
+```http
+Accept: text/event-stream
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+请求：
+
+```json
+{
+  "client_message_id": "cli_xxx",
+  "content": "帮我推荐苹果电脑",
+  "attachments": []
+}
+```
+
+### POST /agent/guide-suggestions
+
+权限：用户
+
+用途：客户端浮窗向导在商品列表、购物车、订单和商品详情页请求可点击的 AI 问题建议。服务端先生成规则候选，再用小模型按 `agent.prompt.guide_suggestions` 改写和排序，最终返回最多 3 条 10 个中文字以内的短问题；模型失败时回退规则候选。客户端点击后可跳转 AI 会话并把 `question` 作为用户输入发送。
+
+请求：
+
+```json
+{
+  "page": "products",
+  "context": {
+    "keyword": "手机",
+    "category_id": "digital",
+    "category_name": "数码电子",
+    "cart_item_count": 3,
+    "visible_product_ids": ["p_digital_001", "p_digital_002"]
+  },
+  "limit": 3
+}
+```
+
+字段：
+
+- `page`：`products`、`cart`、`orders`、`product_detail`。
+- `context.keyword`：列表页搜索词。
+- `context.category_id` / `context.category_name`：当前分类。
+- `context.visible_product_ids`：当前屏幕可见商品 ID，用于后续扩展排序。
+- `context.product_id` / `context.product_name`：商品详情页当前商品。
+- `context.cart_item_count`：购物车商品数。
+- `context.pending_payment_count` / `context.pending_review_count`：订单页待处理数量。
+- `limit`：默认 3，最大 3。
+- `question`：服务端保证不超过 10 个中文字；前端可直接展示在浮窗气泡内。
+
+响应：
+
+```json
+{
+  "items": [
+    {
+      "id": "keyword_recommend",
+      "question": "帮我选手机",
+      "reason": "根据当前搜索词生成可直接发送给导购的选购问题"
+    }
+  ]
+}
+```
+
+错误：
+
+- `400 bad_page`：`page` 不在支持范围内。
+- `400 bad_request`：请求 JSON 不合法。
+
+### POST /agent/runs/{run_id}:cancel
+
+权限：用户
+
+用途：取消当前用户自己的 Agent run。
+
+### GET /agent/runs/{run_id}/trace
+
+权限：用户
+
+用途：查询当前用户自己的 Agent trace。
+
+### Agent 工具协议：search_products
+
+`search_products` 用于搜索当前商品库。主 Agent 应把正向需求和否定约束拆开，不要把“不要/不买/排除/非”等否定词直接塞进 `query`。
+
+参数：
+
+```json
+{
+  "query": "电脑",
+  "limit": 5,
+  "constraints": {
+    "brands": [],
+    "terms": [],
+    "categories": ["笔记本电脑"]
+  },
+  "negative": {
+    "brands": ["苹果", "Apple"],
+    "terms": ["MacBook"],
+    "categories": []
+  }
+}
+```
+
+字段说明：
+
+- `query`：正向商品关键词，建议 2-4 个词。
+- `constraints`：用户明确需要的品牌、属性、型号、类目。
+- `negative`：用户明确不要的品牌、属性、型号、类目；这是硬约束，命中商品会被工具层剔除。
+
+## 语音
+
+### GET /speech/realtime
+
+权限：用户
+
+用途：客户端通过 WebSocket 上传 PCM 音频，后端代理讯飞实时语音识别并返回识别事件。
+
+Query：
+
+- `sample_rate`：当前仅支持 `16000`。
+
+服务端事件：
+
+```json
+{"type":"ready"}
+{"type":"partial","text":"你好","seq":1}
+{"type":"final","text":"你好世界","seq":2}
+{"type":"closed"}
+{"type":"error","code":"speech_network_error","message":"语音识别服务暂时不可用"}
+```
+
+### POST /speech/tts
+
+权限：用户
+
+用途：AI 回复完成后，客户端把可见回复文本发给后端，后端按 `tts.provider` 选择语音合成供应商，并直接返回音频字节。供应商密钥只保存在服务端配置中心。
+
+请求头：
+
+```http
+Content-Type: application/json
+Accept: audio/mpeg
+Authorization: Bearer <token>
+```
+
+请求：
+
+```json
+{
+  "text": "这几款手机更适合日常拍照和长续航。",
+  "voice": "xiaoyan"
+}
+```
+
+字段：
+
+- `text`：必填，默认最大 800 个字符，可通过当前 provider 的最大长度配置控制。
+- `voice`：可选，不传时使用当前 provider 的默认音色。
+
+响应：
+
+- `200`：音频字节，默认 `Content-Type: audio/mpeg`。
+- `400 empty_text`：文本为空。
+- `400 text_too_long`：文本超过服务端限制。
+- `501 tts_not_enabled`：未开启或未配置 TTS。
+- `502 tts_failed`：供应商合成失败或网络异常。
+
+相关配置：
+
+- `tts.provider`：`xunfei` 或 `doubao`
+
+讯飞：
+
+- `xunfei.tts.enabled`
+- `xunfei.tts.app_id`
+- `xunfei.tts.api_key`
+- `xunfei.tts.api_secret`
+- `xunfei.tts.base_url`
+- `xunfei.tts.voice`
+- `xunfei.tts.speed`
+- `xunfei.tts.volume`
+- `xunfei.tts.pitch`
+- `xunfei.tts.timeout_seconds`
+- `xunfei.tts.max_runes`
+
+豆包/火山：
+
+- `doubao.tts.enabled`
+- `doubao.tts.app_id`
+- `doubao.tts.api_key`
+- `doubao.tts.base_url`
+- `doubao.tts.cluster`
+- `doubao.tts.voice`
+- `doubao.tts.encoding`
+- `doubao.tts.uid`
+- `doubao.tts.speed_ratio`
+- `doubao.tts.volume_ratio`
+- `doubao.tts.pitch_ratio`
+- `doubao.tts.timeout_seconds`
+- `doubao.tts.max_runes`
+
+启用豆包 TTS 时至少需要：
+
+```text
+tts.provider=doubao
+doubao.tts.enabled=true
+doubao.tts.app_id=<AppID>
+doubao.tts.api_key=<Access Token 或 API Key>
+doubao.tts.cluster=volcano_tts
+doubao.tts.voice=<voice_type>
+doubao.tts.encoding=mp3
+```
+
+## 图片搜索
+
+### POST /search/image
+
+权限：用户
+
+用途：上传或引用一张图片，基于商品图片向量检索相似商品。当前支持 JPEG、PNG、GIF、WebP。
+
+请求：
+
+```json
+{
+  "file_id": "file_xxx",
+  "object_key": "uploads/xxx.webp",
+  "image_url": "/api/v1/assets/ecommerce_agent_dataset/...",
+  "top_k": 5
+}
+```
+
+字段说明：
+
+- `file_id`、`object_key`、`image_url` 三选一。
+- `file_id` 或 `object_key` 走 MinIO 对象存储。
+- `image_url` 支持数据集静态资源路径或外部 URL。
+- 当前默认图片向量使用 DashScope `qwen3-vl-embedding` 512 维语义向量，Milvus collection 为 `product_image_vectors_v2`；`local_histogram` 64 维颜色直方图仅作为显式 fallback。
+
+响应：
+
+```json
+{
+  "relevance_status": "matched",
+  "match_status": "ok",
+  "items": [],
+  "durations": {
+    "total_ms": 12,
+    "download_ms": 0,
+    "embedding_ms": 2,
+    "vector_search_ms": 9,
+    "rerank_ms": 0
+  }
+}
+```
+
+## 商家端
+
+### POST /merchant/products
+
+权限：商家
+
+用途：创建当前商家的商品。
+
+请求：
+
+```json
+{
+  "name": "商品名称",
+  "brand": "品牌",
+  "category_id": "c_dataset_digital",
+  "image_url": "/api/v1/assets/ecommerce_agent_dataset/...",
+  "price": "2999.00",
+  "market_price": "3299.00",
+  "stock_quantity": 100,
+  "stock_status": "in_stock",
+  "tags": ["新品"],
+  "selling_points": ["核心卖点"],
+  "recommend_reason": "推荐理由",
+  "risk_notes": [],
+  "description": "商品详情"
+}
+```
+
+说明：后端会强制 `merchant_id` 为当前商家。
+
+### PATCH /merchant/products/{product_id}
+
+权限：商家
+
+用途：更新当前商家的商品。
+
+### DELETE /merchant/products/{product_id}
+
+权限：商家
+
+用途：软删除商品，状态置为 `deleted`。
+
+### GET /merchant/documents
+
+权限：商家
+
+用途：查询当前商家上传的知识资料。
+
+Query：`page`、`page_size`
+
+### POST /merchant/documents
+
+权限：商家
+
+用途：上传商家知识资料，后端会切分为知识 chunk 供 RAG 检索。
+
+请求：
+
+```json
+{
+  "title": "售后政策",
+  "doc_type": "after_sales",
+  "content": "七天无理由退货规则..."
+}
+```
+
+### GET /merchant/orders
+
+权限：商家
+
+用途：查询当前商家的订单。
+
+Query：`page`、`page_size`
+
+### PATCH /merchant/orders/{order_id}
+
+权限：商家
+
+用途：更新当前商家的订单状态。
+
+请求：
+
+```json
+{"status": "shipped"}
+```
+
+### GET /merchant/promotions
+
+权限：商家
+
+用途：查询当前商家的促销规则。
+
+Query：`page`、`page_size`
+
+### POST /merchant/promotions
+
+权限：商家
+
+用途：创建商家促销。后端会强制 `scope=merchant` 并绑定当前商家。
+
+请求：
+
+```json
+{
+  "name": "店铺满 500 减 50",
+  "type": "full_reduction",
+  "threshold_amount": "500.00",
+  "discount_amount": "50.00",
+  "stackable": true,
+  "start_at": "2026-05-24T00:00:00+08:00",
+  "end_at": "2026-06-24T00:00:00+08:00",
+  "status": "active"
+}
+```
+
+### PATCH /merchant/promotions/{promotion_id}
+
+权限：商家
+
+用途：更新商家促销状态。
+
+请求：
+
+```json
+{"status": "inactive"}
+```
+
+### GET /merchant/reviews
+
+权限：商家
+
+用途：查询当前商家的商品评价。
+
+Query：`page`、`page_size`
+
+### POST /merchant/reviews/{review_id}:reply
+
+权限：商家
+
+用途：回复当前商家的评价。
+
+请求：
+
+```json
+{"reply": "感谢反馈，我们会继续优化。"}
+```
+
+## 管理员端
+
+以下接口均需管理员权限。
+
+### GET /admin/accounts
+
+用途：分页查询账号。
+
+Query：`page`、`page_size`
+
+### PATCH /admin/accounts/{account_id}
+
+用途：启用、禁用或标记风险账号。账号状态为 `risk` 时，已登录用户调用 Agent 会被风控拦截。
+
+请求：
+
+```json
+{"status": "risk"}
+```
+
+状态允许：`active`、`inactive`、`risk`。
+
+### PATCH /admin/merchants/{merchant_id}
+
+用途：更新商家状态。商家状态为 `risk` 或非 `active` 时，其商品不会进入商品搜索和 Agent 商品召回。
+
+请求：
+
+```json
+{"status": "risk"}
+```
+
+状态允许：`active`、`inactive`、`risk`。
+
+### GET /admin/merchants
+
+用途：分页查询所有商家，包括 `risk` 和 `inactive` 状态，供管理员风控页面使用。
+
+Query：`page`、`page_size`
+
+### GET /admin/products
+
+用途：分页查询所有商品。
+
+### PATCH /admin/products/{product_id}
+
+用途：更新商品状态。商品状态为 `risk` 或非 `active` 时，不会进入商品搜索和 Agent 商品召回。
+
+请求：
+
+```json
+{"status": "risk"}
+```
+
+状态允许：`active`、`inactive`、`deleted`、`risk`。
+
+### GET /admin/orders
+
+用途：分页查询所有订单。
+
+### GET /admin/documents
+
+用途：分页查询所有知识资料。
+
+### GET /admin/promotions
+
+用途：分页查询促销。
+
+### POST /admin/promotions
+
+用途：创建平台或指定商家促销。
+
+### PATCH /admin/promotions/{promotion_id}
+
+用途：更新促销状态。
+
+### GET /admin/reviews
+
+用途：分页查询所有评价。
+
+### PATCH /admin/reviews/{review_id}
+
+用途：更新评价状态。
+
+请求：
+
+```json
+{"status": "hidden"}
+```
+
+状态允许：`visible`、`hidden`、`deleted`。
+
+## 管理员配置与 Prompt
+
+### GET /admin/configs
+
+权限：管理员
+
+用途：分页查询非 Prompt 动态配置。`agent.prompt.*` 已移到 Prompt 管理接口。
+
+### PATCH /admin/configs/{config_key}
+
+权限：管理员
+
+用途：更新动态配置。后端按 key 自动写入对应 Nacos dataId：
+
+- `retrieval.*` -> `xzxg-shop-rag-config.json`
+- `vector.*`、`milvus.*`、`embedding.*` -> `xzxg-shop-infra-config.json`
+- `agent.prompt.*` -> `xzxg-shop-agent-prompts.json`
+- 其他 -> `xzxg-shop-app-config.json`
+
+请求：
+
+```json
+{
+  "value": "80",
+  "value_type": "int",
+  "description": "向量召回候选数",
+  "is_secret": false
+}
+```
+
+### GET /admin/prompts
+
+权限：管理员
+
+用途：分页查询 Prompt 最新版本和最近发布记录。
+
+响应：
+
+```json
+{
+  "items": [
+    {
+      "prompt_id": "prm_xxx",
+      "prompt_key": "agent.prompt.main_template",
+      "title": "主 Agent 模板 Prompt",
+      "content": "...",
+      "status": "active",
+      "version": 1,
+      "description": "模板化组装主 Agent 系统提示词"
+    }
+  ],
+  "page": 1,
+  "page_size": 10,
+  "total": 15,
+  "publish_records": []
+}
+```
+
+当前运行时 Prompt 主要配置项：
+
+- `agent.prompt.main_template`：主 Agent 系统 Prompt 模板，支持 `{intent_brief}`、`{tool_call_protocol}`、`{available_tools}`、`{available_skills}`、`{tool_focus}`、`{final_output_rules}`、`{intent_output_rules}` 占位符。
+- `agent.prompt.tool_call_protocol`：ReAct 阶段工具和 skill 调用 JSON 协议。
+- `agent.prompt.final_output_rules`：最终回答通用规范，包括 `<final>` 流式输出、`<item>product_id</item>` 挂品、Markdown 表格 `<form>` 等约束。
+- `agent.prompt.intent_tool_policy`：按 route/intent 声明可用工具、可用 skill、禁用能力和工具使用侧重。
+- `agent.prompt.intent.*`：各导购/非导购子意图内容范式和输出要求。
+- `agent.prompt.route`、`agent.prompt.guide_intent`：意图识别 Prompt。
+
+运行时会根据当前意图从 `agent.prompt.intent_tool_policy` 计算可用工具和 skill，再注入 `agent.prompt.main_template`；旧的 `agent.prompt.answer_base`、`agent.prompt.tool_protocol` 不再使用。
+
+### PATCH /admin/prompts/{prompt_key}
+
+权限：管理员
+
+用途：保存 Prompt 草稿。不会影响运行时，必须发布后才写入 Nacos。
+
+请求：
+
+```json
+{
+  "title": "主 Agent 模板 Prompt",
+  "description": "模板化组装主 Agent 系统提示词",
+  "content": "..."
+}
+```
+
+### POST /admin/prompts/{prompt_key}/publish
+
+权限：管理员
+
+用途：发布该 Prompt 最新版本。后端会将旧 active 归档、新版本置为 active，并同步到 `xzxg-shop-agent-prompts.json`。
+
+## 管理员调试与测评
+
+### GET /admin/vector/status
+
+权限：管理员
+
+用途：查看 Milvus 向量索引状态。
+
+### GET /admin/agent/runs
+
+权限：管理员
+
+用途：分页查询最近 Agent run。
+
+### GET /admin/agent/runs/{run_id}/trace
+
+权限：管理员
+
+用途：查询指定 run 的全链路 trace，包括意图识别、工具调用、知识片段、模型原始输出等。
+
+### GET /admin/evals
+
+权限：管理员
+
+用途：查询质量测评数据集、工具套件和最近报告。
+
+### GET /admin/evals/reports/{run_id}/{report_name}
+
+权限：管理员
+
+用途：查询测评报告详情。
+
+示例：
+
+```text
+GET /api/v1/admin/evals/reports/rag_recall_eval_20260524T023738/rag_recall_eval
+```
+
+### POST /eval/intent
+
+权限：管理员
+
+用途：单条意图识别调试。
+
+请求：
+
+```json
+{"query": "帮我推荐一台华为电脑"}
+```
+
+### POST /eval/rag
+
+权限：管理员
+
+用途：单条 RAG 召回调试。
+
+请求：
+
+```json
+{
+  "query": "华为 电脑",
+  "top_k": 5
+}
+```
+
+响应：
+
+```json
+{
+  "keyword": "华为 电脑",
+  "items": [
+    {
+      "chunkId": "k_xxx",
+      "title": "商品资料",
+      "snippet": "资料片段",
+      "source": "product:p_digital_001"
+    }
+  ]
+}
+```
+
+## 静态资源
+
+### GET /assets/ecommerce_agent_dataset/{path}
+
+权限：公开
+
+用途：访问导入数据集中的商品图片等静态资源。

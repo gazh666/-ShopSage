@@ -1,0 +1,41 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.xzxg.shop'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.xzxg.shop'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.3.0'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            buildConfigField 'boolean', 'SHOW_TEST_SERVER_SETTINGS', 'true'
+            buildConfigField 'String', 'DEFAULT_API_BASE', '"http://82.156.207.98:8080/api/v1"'
+        }
+        release {
+            buildConfigField 'boolean', 'SHOW_TEST_SERVER_SETTINGS', 'false'
+            buildConfigField 'String', 'DEFAULT_API_BASE', '"http://82.156.207.98:8080/api/v1"'
+            minifyEnabled false
+        }
+    }
+}
+
+dependencies {
+    implementation 'io.noties.markwon:core:4.6.2'
+    implementation 'io.noties.markwon:ext-tables:4.6.2'
+    implementation 'io.noties.markwon:ext-tasklist:4.6.2'
+    implementation 'io.noties.markwon:html:4.6.2'
+    implementation 'io.noties.markwon:image:4.6.2'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+}

@@ -1,0 +1,6 @@
+.git
+.env
+.env.*
+README.md
+bin/
+tmp/

@@ -1,0 +1,148 @@
+package store
+
+import (
+	"context"
+	"time"
+
+	"shopsage/backend/src/domain"
+	"shopsage/backend/src/rag"
+)
+
+// Store 是后端业务层唯一依赖的数据访问边界。
+// HTTP handler 和 Agent runtime 都只面向这个接口，避免直接绑定 MySQL 细节。
+type Store interface {
+	// 账号与鉴权。
+	GetAccount(ctx context.Context, accountID string) (domain.Account, bool)
+	GetAccountByUsername(ctx context.Context, username string) (domain.Account, string, bool)
+	GetAccountByToken(ctx context.Context, token string) (domain.Account, bool)
+	ListAccounts(ctx context.Context) []domain.Account
+	ListAccountsPage(ctx context.Context, page int, pageSize int) ([]domain.Account, int)
+	CreateAccount(ctx context.Context, input domain.AccountCreateInput) (domain.Account, error)
+	UpdateAccountPasswordHash(ctx context.Context, accountID string, passwordHash string) bool
+	UpdateAccountProfile(ctx context.Context, accountID string, displayName string, avatarURL string) (domain.Account, bool)
+	UpdateAccountContact(ctx context.Context, accountID string, phone string, email string) (domain.Account, bool)
+	UpdateAccountStatus(ctx context.Context, accountID string, status string) (domain.Account, bool)
+	CreateAuthToken(ctx context.Context, accountID string) (string, error)
+	DeleteAuthToken(ctx context.Context, token string) bool
+	DeleteAuthTokensByAccount(ctx context.Context, accountID string) bool
+	DeleteAccount(ctx context.Context, accountID string) bool
+
+	// Agent 会话、消息、run 和 trace。
+	ListUserSessions(ctx context.Context, accountID string) []domain.ChatSession
+	SearchUserSessions(ctx context.Context, accountID string, keyword string, page int, pageSize int) ([]domain.ChatSession, int)
+	CreateSession(ctx context.Context, accountID string, title string) (domain.ChatSession, error)
+	GetSession(ctx context.Context, accountID string, sessionID string) (domain.ChatSession, bool)
+	GetSessionDetail(ctx context.Context, accountID string, sessionID string) (domain.ChatSessionDetail, bool)
+	UpdateSessionSummary(ctx context.Context, accountID string, sessionID string, title string, summary string) (domain.ChatSession, bool)
+	PinSession(ctx context.Context, accountID string, sessionID string, pinned bool) (domain.ChatSession, bool)
+	DeleteSession(ctx context.Context, accountID string, sessionID string) bool
+	CreateUserMessage(ctx context.Context, input domain.UserMessage) (domain.UserMessage, bool, error)
+	CreateRun(ctx context.Context, accountID string, sessionID string, messageID string) (domain.AgentRun, bool, error)
+	UpdateRunStatus(ctx context.Context, accountID string, runID string, status domain.RunStatus) (domain.AgentRun, bool)
+	UpdateRunResult(ctx context.Context, accountID string, runID string, content string, blocksJSON string, followupsJSON string, segmentsJSON string) bool
+	ListRecentConversationRecords(ctx context.Context, accountID string, sessionID string, since time.Time, limit int) []domain.ConversationRecord
+	IsRunCanceled(ctx context.Context, runID string) bool
+	RecordAgentTrace(ctx context.Context, input domain.AgentTraceInput) error
+	ListAgentTrace(ctx context.Context, accountID string, runID string) []domain.AgentTraceEvent
+	ListAgentTraceByRun(ctx context.Context, runID string) []domain.AgentTraceEvent
+	ListAgentTraceEvents(ctx context.Context, since time.Time, limit int) []domain.AgentTraceEvent
+	ListRecentAgentRuns(ctx context.Context, limit int) []domain.AgentRun
+	ListAgentRunsPage(ctx context.Context, page int, pageSize int) ([]domain.AgentRun, int)
+	ListAgentPromptsPage(ctx context.Context, page int, pageSize int) ([]domain.AgentPrompt, int)
+	SeedAgentPrompts(ctx context.Context, defaults []domain.AgentPromptInput) error
+	GetActiveAgentPrompt(ctx context.Context, promptKey string) (domain.AgentPrompt, bool)
+	SaveAgentPromptDraft(ctx context.Context, input domain.AgentPromptInput) (domain.AgentPrompt, error)
+	PublishAgentPrompt(ctx context.Context, promptKey string, publishedBy string, publishTarget string) (domain.AgentPrompt, domain.AgentPromptPublishRecord, error)
+	ListAgentPromptPublishRecords(ctx context.Context, promptKey string, limit int) []domain.AgentPromptPublishRecord
+
+	// 用户长期偏好记忆（肤质/预算/品类，跨会话持久化）。
+	GetUserPreferences(ctx context.Context, accountID string) (domain.UserPreferences, bool)
+	UpsertUserPreferences(ctx context.Context, input domain.UserPreferences) error
+
+	// 任务规划流水线（复杂导购任务持久化、断点恢复与链路可视化）。
+	CreateAgentTask(ctx context.Context, task domain.AgentTask) (domain.AgentTask, error)
+	GetAgentTask(ctx context.Context, taskID string) (domain.AgentTask, bool)
+	GetIncompleteTaskByConversation(ctx context.Context, accountID string, conversationID string) (domain.AgentTask, bool)
+	UpdateAgentTaskStatus(ctx context.Context, taskID string, status domain.AgentTaskStatus, failReason string) bool
+	ResumeAgentTask(ctx context.Context, taskID string) bool
+	ListAgentTasksPage(ctx context.Context, page int, pageSize int) ([]domain.AgentTask, int)
+	ListAgentTasksSince(ctx context.Context, since time.Time, limit int) []domain.AgentTask
+	CreateAgentSubTasks(ctx context.Context, subs []domain.AgentSubTask) error
+	ListAgentSubTasks(ctx context.Context, taskID string) []domain.AgentSubTask
+	ListAgentSubTasksSince(ctx context.Context, since time.Time, limit int) []domain.AgentSubTask
+	UpdateAgentSubTask(ctx context.Context, sub domain.AgentSubTask) bool
+
+	// 商品、类目、商家和 SKU。
+	SearchProducts(ctx context.Context, query string) []domain.ProductCard
+	SearchProductsLimit(ctx context.Context, query string, vectorLimit int) []domain.ProductCard
+	ListCategories(ctx context.Context) []domain.Category
+	ListMerchants(ctx context.Context) []domain.Merchant
+	ListMerchantsPage(ctx context.Context, page int, pageSize int) ([]domain.Merchant, int)
+	ListAllMerchantsPage(ctx context.Context, page int, pageSize int) ([]domain.Merchant, int)
+	UpdateMerchantStatus(ctx context.Context, merchantID string, status string) (domain.Merchant, bool)
+	ListProducts(ctx context.Context, keyword string, categoryID string) []domain.ProductCard
+	ListProductsPage(ctx context.Context, keyword string, categoryID string, page int, pageSize int) ([]domain.ProductCard, int)
+	ListAllProducts(ctx context.Context) []domain.ProductCard
+	ListAllProductsPage(ctx context.Context, page int, pageSize int) ([]domain.ProductCard, int)
+	GetProduct(ctx context.Context, productID string) (domain.ProductDetail, bool)
+	SearchProductsByImageVector(ctx context.Context, vector []float32, limit int) ([]domain.ProductCard, error)
+	CreateProduct(ctx context.Context, input domain.ProductUpsertInput) (domain.ProductDetail, error)
+	UpdateProduct(ctx context.Context, productID string, input domain.ProductUpsertInput) (domain.ProductDetail, bool)
+	UpdateProductStatus(ctx context.Context, merchantID string, productID string, status string) (domain.ProductDetail, bool)
+	ListProductSKUs(ctx context.Context, productID string) []domain.ProductSKU
+
+	// 购物车、订单和虚拟支付。
+	GetCart(ctx context.Context, accountID string) domain.Cart
+	AddCartItem(ctx context.Context, accountID string, productID string, skuID string, quantity int) (domain.Cart, bool)
+	UpdateCartItem(ctx context.Context, accountID string, cartItemID string, quantity *int, selected *bool) (domain.Cart, bool)
+	DeleteCartItem(ctx context.Context, accountID string, cartItemID string) (domain.Cart, bool)
+	PreviewCartDiscount(ctx context.Context, accountID string) domain.DiscountPreview
+	CreateOrderFromCart(ctx context.Context, accountID string) ([]domain.Order, bool)
+	GetOrder(ctx context.Context, accountID string, orderID string) (domain.Order, bool)
+	PayOrder(ctx context.Context, accountID string, orderID string, method string) (domain.Order, domain.Payment, bool)
+	CancelOrder(ctx context.Context, accountID string, orderID string, reason string) (domain.Order, bool)
+	ConfirmReceipt(ctx context.Context, accountID string, orderID string) (domain.Order, bool)
+	ExpirePendingOrders(ctx context.Context) int
+	ListUserOrders(ctx context.Context, accountID string) []domain.Order
+	ListUserOrdersPage(ctx context.Context, accountID string, page int, pageSize int) ([]domain.Order, int)
+	ListMerchantOrders(ctx context.Context, merchantID string) []domain.Order
+	ListMerchantOrdersPage(ctx context.Context, merchantID string, page int, pageSize int) ([]domain.Order, int)
+	ListAllOrders(ctx context.Context) []domain.Order
+	ListAllOrdersPage(ctx context.Context, page int, pageSize int) ([]domain.Order, int)
+	UpdateOrderStatus(ctx context.Context, merchantID string, orderID string, status string) (domain.Order, bool)
+
+	// 促销、优惠券和评价。
+	ListPromotions(ctx context.Context, merchantID string) []domain.PromotionRule
+	ListPromotionsPage(ctx context.Context, merchantID string, page int, pageSize int) ([]domain.PromotionRule, int)
+	CreatePromotion(ctx context.Context, input domain.PromotionRuleInput) (domain.PromotionRule, error)
+	UpdatePromotionStatus(ctx context.Context, promotionID string, merchantID string, status string) (domain.PromotionRule, bool)
+	ListCoupons(ctx context.Context, accountID string) []domain.Coupon
+	ListCouponsPage(ctx context.Context, accountID string, page int, pageSize int) ([]domain.Coupon, int)
+	ListUserCoupons(ctx context.Context, accountID string) []domain.UserCoupon
+	ListUserCouponsPage(ctx context.Context, accountID string, page int, pageSize int) ([]domain.UserCoupon, int)
+	ClaimCoupon(ctx context.Context, accountID string, couponID string) (domain.UserCoupon, bool)
+	ListProductReviews(ctx context.Context, productID string) []domain.ProductReview
+	ListProductReviewsPage(ctx context.Context, productID string, page int, pageSize int) ([]domain.ProductReview, int)
+	CreateProductReview(ctx context.Context, accountID string, orderID string, orderItemID string, input domain.ProductReviewInput) (domain.ProductReview, bool)
+	ListMerchantReviews(ctx context.Context, merchantID string) []domain.ProductReview
+	ListMerchantReviewsPage(ctx context.Context, merchantID string, page int, pageSize int) ([]domain.ProductReview, int)
+	ReplyReview(ctx context.Context, merchantID string, reviewID string, reply string) (domain.ProductReview, bool)
+	ListAllReviews(ctx context.Context) []domain.ProductReview
+	ListAllReviewsPage(ctx context.Context, page int, pageSize int) ([]domain.ProductReview, int)
+	UpdateReviewStatus(ctx context.Context, reviewID string, status string) (domain.ProductReview, bool)
+
+	// RAG 知识库。
+	VectorIndexStatus(ctx context.Context) domain.VectorIndexStatus
+	VectorSearchRetries(ctx context.Context) int64
+	SearchKnowledge(ctx context.Context, query string) []domain.Citation
+	SearchKnowledgeByPlan(ctx context.Context, plan rag.RetrievalPlan) []domain.Citation
+	ListMerchantDocuments(ctx context.Context, merchantID string) []domain.KnowledgeDocument
+	ListMerchantDocumentsPage(ctx context.Context, merchantID string, page int, pageSize int) ([]domain.KnowledgeDocument, int)
+	ListAllDocuments(ctx context.Context) []domain.KnowledgeDocument
+	ListAllDocumentsPage(ctx context.Context, page int, pageSize int) ([]domain.KnowledgeDocument, int)
+	CreateMerchantDocument(ctx context.Context, input domain.KnowledgeDocumentInput) (domain.KnowledgeDocument, error)
+
+	// 文件与对象存储。
+	CreateStoredFile(ctx context.Context, input domain.StoredFileInput) (domain.StoredFile, error)
+	GetStoredFile(ctx context.Context, fileID string) (domain.StoredFile, bool)
+}
