@@ -124,9 +124,11 @@ sh ./gradlew :app:assembleDebug
 
 ```text
 backend/           Go 后端（Agent/RAG/store/httpapi/configcenter/risk/ingest 等）
+backend/src/extensions/  可选扩展层（试衣代理、追踪埋点、扩展评测，默认关闭）
+services/fitlab/   独立试衣 HTTP 服务（FastAPI + Pillow/numpy，无模型权重依赖）
 frontend/          React 19 + Vite + TS 管理/商家后台
-android-native/    Java 原生 Android 客户端
-deployments/       docker-compose 全栈编排
+android-native/    Java 原生 Android 客户端（本次未修改）
+deployments/       docker-compose 全栈编排（含可选扩展叠加文件）
 quality/           内置评测数据集与离线评估脚本
 docs/、.ai/        设计文档、PRD、API 契约与技术方案
 Makefile           统一开发/测试/构建入口
@@ -142,6 +144,72 @@ Makefile           统一开发/测试/构建入口
 
 离线评估脚本复用线上诊断/分诊标准 schema，输出结构化报告（诊断命中率、分诊一致率、平均置信度）。
 
-## 七、免责声明
+## 七、可选扩展能力（非侵入式）
+
+在既有电商底座与 Agent 推理之上追加三项能力：**试衣 HTTP 工具、追踪埋点、扩展评测后台**。三者全部通过 `backend/src/extensions` 外层包装接入，不修改原有电商业务、Agent 推理与工具业务代码，Android 客户端零改动。
+
+### 7.1 开关与默认行为
+
+| 开关 | 默认值 | 说明 |
+|---|---|---|
+| `EXT_ENABLED` | `false` | 扩展总开关。关闭时 `extensions.Wrap` 原样返回 `server.Routes()`，不注册扩展路由、不启动埋点协程、不创建埋点表，行为与原始版本完全一致 |
+| `EXT_FITLAB_ENABLED` | `true` | 试衣 HTTP 工具开关（总开关开启后生效） |
+| `FITLAB_BASE_URL` | `http://fitlab:8000,http://127.0.0.1:8000` | 试衣服务候选地址，按顺序探测与回退 |
+| `FITLAB_TIMEOUT_MS` | `8000` | 试衣代理超时，失败即降级 |
+| `EXT_TELEMETRY_ENABLED` | `true` | 追踪埋点开关 |
+| `EXT_TELEMETRY_WINDOW_HOURS` | `24` | 后台概览默认统计窗口 |
+| `EXT_TELEMETRY_MAX_BODY_KB` | `64` | 前端埋点上报体上限 |
+| `EXT_EVAL_DIR` | `quality/reports` | 扩展评测后台读取的报告目录 |
+| `VITE_EXT_UI` | 未设置（关闭） | 前端「扩展能力」入口的构建开关 |
+
+### 7.2 启用方式
+
+```bash
+# Docker：基础编排 + 可选扩展叠加文件（不改动原有服务定义）
+make docker-up-ext
+# 等价于
+docker compose -f deployments/docker-compose.yml -f deployments/docker-compose.ext.yml up -d --build
+
+# 本地后端
+EXT_ENABLED=true FITLAB_BASE_URL=http://127.0.0.1:8000 go run ./cmd/api
+
+# 本地前端（带扩展入口）
+cd frontend && VITE_EXT_UI=true npm run dev
+
+# 单独启动试衣服务
+cd services/fitlab && pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+关闭扩展时直接使用 `docker compose -f deployments/docker-compose.yml up -d` 或不设置 `EXT_ENABLED` 启动后端即可。
+
+### 7.3 接口
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `POST` | `/api/v1/fitlab/tryon` | multipart：`person_image`、`garment_image`、`category`（auto/upper/lower/dress），成功返回 `image/png` |
+| `GET` | `/api/v1/fitlab/health` | 试衣服务健康探测，公开接口，始终返回 200 JSON |
+| `POST` | `/api/v1/ext/telemetry/events` | 前端埋点批量上报（≤50 条），异步批量落库 |
+| `GET` | `/api/v1/admin/ext/overview` | 管理员：开关状态、试衣健康度、埋点统计、评测摘要 |
+| `GET` | `/api/v1/admin/ext/eval/reports` | 管理员：评测报告列表，支持 `?kind=` 过滤 |
+| `GET` | `/api/v1/admin/ext/eval/reports/detail?id=` | 管理员：查看原始评测报告 |
+
+试衣服务自身还提供 `/healthz`、`/v1/tryon`、`/v1/tryon/base64`、`/v1/metrics`，便于独立部署与压测。
+
+### 7.4 异常降级
+
+- 试衣服务未开启、连接失败、超时、返回非图片或损坏图片时，后端统一返回 `503` JSON：`code=fitlab_unavailable|fitlab_disabled`、`degraded=true`，前端提示后继续走原有文字导购流程。
+- 埋点采用非阻塞队列 + 5 秒批量刷盘，队列满时丢弃事件；建表或写库失败只记日志，不影响任何业务请求与 Agent 主链路。
+- 扩展接口自行复刻原路由的 Bearer 鉴权、角色策略、CORS 白名单、请求体上限与限流，避免形成旁路。
+
+### 7.5 验证
+
+```bash
+cd backend && go build ./... && go vet ./... && go test ./...
+cd services/fitlab && python -m unittest discover -s tests -v
+cd frontend && npm run lint && npm run build
+```
+
+## 八、免责声明
 
 本项目的 AI 导购建议仅作辅助参考，实际购物决策请以商品详情、官方说明与个人实际需求为准。

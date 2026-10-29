@@ -1,6 +1,6 @@
 # ShopSage 工业结构包装：本地开发、测试、构建与 Docker 一键入口。
 # 依赖：Go 1.24+、Node.js 22+、Docker Compose。
-.PHONY: help dev-backend dev-frontend test-backend test-frontend build-backend build-frontend docker-build docker-up docker-down docker-logs
+.PHONY: help dev-backend dev-frontend test-backend test-frontend build-backend build-frontend docker-build docker-up docker-down docker-logs docker-up-ext docker-down-ext
 
 help: ## 显示可用命令
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -34,3 +34,9 @@ docker-down: ## 停止并移除全栈容器
 
 docker-logs: ## 查看后端/前端日志
 	docker compose -f deployments/docker-compose.yml logs -f backend frontend
+
+docker-up-ext: ## 启动全栈并开启扩展能力（试衣服务 + 埋点 + 扩展评测）
+	docker compose -f deployments/docker-compose.yml -f deployments/docker-compose.ext.yml up -d --build
+
+docker-down-ext: ## 停止扩展全栈
+	docker compose -f deployments/docker-compose.yml -f deployments/docker-compose.ext.yml down

@@ -13,6 +13,7 @@ import (
 
 	"shopsage/backend/src/agent"
 	"shopsage/backend/src/configcenter"
+	"shopsage/backend/src/extensions"
 	"shopsage/backend/src/httpapi"
 	"shopsage/backend/src/imagevector"
 	"shopsage/backend/src/rag"
@@ -93,9 +94,11 @@ func main() {
 	server := httpapi.NewServer(mysqlStore, configCenter, runtime, logger)
 
 	// 所有 HTTP 中间件都在 Server.Routes 中组装，入口只负责生命周期。
+	// 扩展能力（试衣、埋点、扩展评测）通过 extensions.Wrap 非侵入式叠加：
+	// EXT_ENABLED=false（默认）时返回原始 handler，行为与未接入扩展完全一致。
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.Routes(),
+		Handler:           extensions.Wrap(server.Routes(), extensions.Deps{Accounts: mysqlStore, Telemetry: mysqlStore, Configs: configCenter, Logger: logger}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

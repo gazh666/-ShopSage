@@ -801,7 +801,7 @@ func parseXunfeiSpeechResult(raw []byte) (xunfeiSpeechResult, bool) {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return xunfeiSpeechResult{}, false
 	}
-	if code := intValue(payload["code"]); code != 0 {
+	if code := intValue(payload["code"], 0); code != 0 {
 		return xunfeiSpeechResult{}, false
 	}
 	if msgType := stringValue(payload["msg_type"]); msgType != "" && msgType != "result" {
@@ -875,18 +875,6 @@ func stringValue(value any) string {
 		return strconv.FormatBool(typed)
 	default:
 		return ""
-	}
-}
-
-func intValue(value any) int {
-	switch typed := value.(type) {
-	case float64:
-		return int(typed)
-	case string:
-		parsed, _ := strconv.Atoi(typed)
-		return parsed
-	default:
-		return 0
 	}
 }
 

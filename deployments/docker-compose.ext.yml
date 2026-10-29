@@ -1,0 +1,22 @@
+# 可选扩展开关层：叠加在 deployments/docker-compose.yml 之上，
+# 只向原有服务追加环境变量与前端的构建参数，不改动任何原有服务定义。
+#
+# 启用方式：
+#   docker compose -f deployments/docker-compose.yml -f deployments/docker-compose.ext.yml up -d --build
+# 关闭方式：不带 -f deployments/docker-compose.ext.yml 启动即可，行为与原始版本完全一致。
+services:
+  backend:
+    environment:
+      EXT_ENABLED: "true"
+      EXT_FITLAB_ENABLED: "true"
+      EXT_TELEMETRY_ENABLED: "true"
+      FITLAB_BASE_URL: "http://fitlab:8000"
+      FITLAB_TIMEOUT_MS: "8000"
+    depends_on:
+      fitlab:
+        condition: service_healthy
+
+  frontend:
+    build:
+      args:
+        VITE_EXT_UI: "true"

@@ -9,6 +9,9 @@ RUN npm install
 
 # 复制源码并构建生产包（tsc 类型检查 + vite build）。
 COPY . .
+# 扩展后台是可选能力：默认关闭，构建参数 VITE_EXT_UI=true 时才注册入口。
+ARG VITE_EXT_UI=""
+ENV VITE_EXT_UI=${VITE_EXT_UI}
 RUN npm run build
 
 # 运行阶段：非 root nginx，监听 8080 规避 80 端口特权。

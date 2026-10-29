@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { clearSession, loadSession } from './api/auth';
 import { AdminPage } from './pages/AdminPage';
+import { AdminExtensionsPage } from './pages/admin/AdminExtensionsPage';
 import { LoginPage } from './pages/LoginPage';
 import { MerchantPage } from './pages/MerchantPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { ProductListPage } from './pages/ProductListPage';
 import type { AuthSession } from './types/auth';
+
+// 扩展后台是可选能力：只有显式开启 VITE_EXT_UI 才注册路由和入口，
+// 关闭时页面结构与原始版本完全一致。
+const EXT_UI_ENABLED = import.meta.env.VITE_EXT_UI === 'true';
 
 type Route =
   | 'products'
@@ -15,6 +20,7 @@ type Route =
   | 'adminDebug'
   | 'adminEval'
   | 'adminRisk'
+  | 'adminExtensions'
   | 'detail';
 
 export function App() {
@@ -89,6 +95,11 @@ export function App() {
               <button className={route === 'adminRisk' ? 'active' : ''} onClick={() => setRoute('adminRisk')}>
                 风控管理
               </button>
+              {EXT_UI_ENABLED ? (
+                <button className={route === 'adminExtensions' ? 'active' : ''} onClick={() => setRoute('adminExtensions')}>
+                  扩展能力
+                </button>
+              ) : null}
               <button className={route === 'products' || route === 'detail' ? 'active' : ''} onClick={() => setRoute('products')}>
                 商品巡检
               </button>
@@ -110,6 +121,7 @@ export function App() {
         {route === 'adminDebug' && isAdmin ? <AdminPage token={session.token} view="debug" /> : null}
         {route === 'adminEval' && isAdmin ? <AdminPage token={session.token} view="eval" /> : null}
         {route === 'adminRisk' && isAdmin ? <AdminPage token={session.token} view="risk" /> : null}
+        {route === 'adminExtensions' && isAdmin && EXT_UI_ENABLED ? <AdminExtensionsPage token={session.token} /> : null}
       </main>
     </div>
   );

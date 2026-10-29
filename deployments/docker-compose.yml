@@ -125,6 +125,24 @@ services:
       retries: 3
       start_period: 10s
 
+  # 试衣扩展服务：仅追加新服务，不修改上方任何原有服务定义。
+  # 独立 HTTP 工具，后端 extensions 层按需代理；不可用时自动降级为文字导购。
+  fitlab:
+    build:
+      context: ../services/fitlab
+    environment:
+      FITLAB_MAX_SIDE: "1024"
+      FITLAB_MAX_UPLOAD_BYTES: "6291456"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/healthz')" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
 volumes:
   mysql_data:
   nacos_data:

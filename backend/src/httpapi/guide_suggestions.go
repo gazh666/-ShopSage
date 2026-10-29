@@ -169,7 +169,7 @@ func contextString(ctx map[string]any, key string) string {
 }
 
 func contextInt(ctx map[string]any, key string) int {
-	return intValue(ctx[key])
+	return intValue(ctx[key], 0)
 }
 
 func shortQuestionTerm(value string, maxRunes int) string {
